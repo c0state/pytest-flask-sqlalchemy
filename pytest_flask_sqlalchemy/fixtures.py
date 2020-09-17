@@ -4,6 +4,7 @@ import contextlib
 import pytest
 import sqlalchemy as sa
 from packaging import version
+from sqlalchemy.exc import InvalidRequestError
 
 
 @pytest.fixture(scope='module')
@@ -70,7 +71,10 @@ def _transaction(request, _db, mocker):
     @sa.event.listens_for(session, 'persistent_to_detached')
     @sa.event.listens_for(session, 'deleted_to_detached')
     def rehydrate_object(session, obj):
-        session.add(obj)
+        try:
+            session.add(obj)
+        except InvalidRequestError:
+            sa.orm.session.make_transient(obj)
 
     @request.addfinalizer
     def teardown_transaction():
